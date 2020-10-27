@@ -1,3 +1,4 @@
+// source https://observablehq.com/@duynguyen1678/choropleth-with-tooltip
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
@@ -32,7 +33,7 @@ var promises = [
 function ready([us]) {
     console.log(uv);
     let mouseOver = function(d) {
-        d3.selectAll(".counties")
+        d3.selectAll(".path")
             .transition()
             .duration(200)
             .style("opacity", .5);
@@ -44,7 +45,7 @@ function ready([us]) {
     };
 
     let mouseLeave = function(d) {
-        d3.selectAll(".counties")
+        d3.selectAll(".path")
             .transition()
             .duration(200)
             .style("opacity", .8);
@@ -63,10 +64,10 @@ function ready([us]) {
             return color(d.rate = (uv.get(d.id) != undefined ? uv.get(d.id) : 2658));
         })
         .attr("d", path)
-        .append("title")
-        .text(function(d) { return d.rate; })
         .on("mouseover", mouseOver )
-        .on("mouseleave", mouseLeave );
+        .on("mouseleave", mouseLeave )
+        .append("title")
+        .text(function(d) { return d.rate; });
 
 
     svg.append("path")

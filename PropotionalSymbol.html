@@ -22,23 +22,25 @@
         fill-opacity: .8;
         stroke: #fff;
     }
-
+    .hover {
+        fill: yellow;
+    }
 
 </style>
 <body>
 <script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script src="https://d3js.org/topojson.v1.min.js"></script>
 <script src="https://d3js.org/queue.v1.min.js"></script>
 <h1> Proportional Symbol Map</h1>
 <br>
 <br>
 <script>
-
+// source https://bl.ocks.org/mbostock/4342045
     var width = 960,
         height = 500;
 
     var radius = d3.scale.sqrt()
-        .domain([2658, 5616])
+        .domain([0, 5615])
         .range([0, 10]);
 
     var path = d3.geo.path();
@@ -53,41 +55,61 @@
         .defer(d3.csv, "uv-county.csv")
         .await(ready);
 
-    function ready(error, us, centroid, election) {
+    function ready(error, us, centroid, uvs) {
         if (error) throw error;
 
-        var map = [];
-        var temp =topojson.feature(us, us.objects.counties).features;
-        temp.forEach((data)=>{
-            var flag = true;
-           election.forEach((d) =>{
-               if(data.id == +d["COUNTY_FIPS"])
-               {
-                   map.push({id : data.id, value : +d["UV_Wh/m²"]});
-                   flag = false;
-               }
-           });
-            if(flag)
-                map.push({id : data.id, value : 0})
+        var map = {};
+        var temp =centroid.features;
+
+        uvs.forEach((d) =>{
+            if(!map[d["COUNTY_FIPS"].substr(0,2)])
+                map[d["COUNTY_FIPS"].substr(0,2)] = [{value : 0, county : ""}];
+           if(map[d["COUNTY_FIPS"].substr(0,2)][0].value < Number(d["UV_Wh/m²"]))
+           {
+               map[d["COUNTY_FIPS"].substr(0,2)][0].value = Number(d["UV_Wh/m²"]);
+               map[d["COUNTY_FIPS"].substr(0,2)][0].county = d["COUNTY NAME"];
+           }
+
         });
         console.log(map);
+        temp.forEach((data)=>{
+            data.properties["uvs"] = map[data.id]!=undefined ? map[data.id][0].value : 0;
+            data.properties["county"] = map[data.id]!=undefined ? map[data.id][0].county : 0;
+
+        });
+        console.log(temp);
         svg.append("path")
+            .attr("transform", "translate(30,40)")
             .attr("class", "states")
-            .datum(topojson.feature(us, us.objects.states))
+            .datum(topojson.feature(us, us.objects.counties))
             .attr("d", path);
 
+        console.log(centroid.features.sort(function(a, b) {
+            return b.properties.uvs - a.properties.uvs; }));
         svg.selectAll(".symbol")
-            .data(map.sort(function(a, b) { return Number(b.value) - Number(a.value); }))
+
+            .data(centroid.features.sort(function(a, b) {
+                return b.properties.uvs - a.properties.uvs; }))
             .enter().append("path")
             .attr("class", "symbol")
+            .attr("transform", "translate(30,40)")
             .attr("d", path.pointRadius(function(d) {
-                return radius(d.value)}));
-
+                return radius(d.properties.uvs); }))
+            .on("mouseover", function(d){
+                d3.select("h2").text(d.properties.county +" " +d.properties.uvs);
+                d3.select(this).attr("class","symbol");
+            })
+            .on("mouseout", function(d){
+                d3.select("h2").text("");
+                d3.select(this).attr("class","symbol");
+            });
     }
 
 
 
 </script>
 
+<h3> please see the top cities in each states and hover over the bublle to get the name and value</h3>
+<h2></h2>
 </body>
 </html>
