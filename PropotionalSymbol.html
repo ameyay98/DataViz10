@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<head>
+    <meta charset="UTF-8">
+    <title>Interaction in D3</title>
+</head>
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+    .states {
+        fill: #ccc;
+        stroke: #fff;
+    }
+    .counties {
+        fill: #ccc;
+        stroke: #fff;
+    }
+    .symbol {
+        fill: steelblue;
+        fill-opacity: .8;
+        stroke: #fff;
+    }
+
+
+</style>
+<body>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script src="https://d3js.org/queue.v1.min.js"></script>
+<h1> Proportional Symbol Map</h1>
+<br>
+<br>
+<script>
+
+    var width = 960,
+        height = 500;
+
+    var radius = d3.scale.sqrt()
+        .domain([2658, 5616])
+        .range([0, 10]);
+
+    var path = d3.geo.path();
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    queue()
+        .defer(d3.json, "https://gist.githubusercontent.com/mbostock/4090846/raw/us.json")
+        .defer(d3.json, "us-state-centroids.json")
+        .defer(d3.csv, "uv-county.csv")
+        .await(ready);
+
+    function ready(error, us, centroid, election) {
+        if (error) throw error;
+
+        var map = [];
+        var temp =topojson.feature(us, us.objects.counties).features;
+        temp.forEach((data)=>{
+            var flag = true;
+           election.forEach((d) =>{
+               if(data.id == +d["COUNTY_FIPS"])
+               {
+                   map.push({id : data.id, value : +d["UV_Wh/m²"]});
+                   flag = false;
+               }
+           });
+            if(flag)
+                map.push({id : data.id, value : 0})
+        });
+        console.log(map);
+        svg.append("path")
+            .attr("class", "states")
+            .datum(topojson.feature(us, us.objects.states))
+            .attr("d", path);
+
+        svg.selectAll(".symbol")
+            .data(map.sort(function(a, b) { return Number(b.value) - Number(a.value); }))
+            .enter().append("path")
+            .attr("class", "symbol")
+            .attr("d", path.pointRadius(function(d) {
+                return radius(d.value)}));
+
+    }
+
+
+
+</script>
+
+</body>
+</html>
